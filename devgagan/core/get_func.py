@@ -181,7 +181,7 @@ class ProgressManager:
     def __init__(self):
         self.user_progress: Dict[int, UserProgress] = defaultdict(UserProgress)
     
-    def calculate_progress(self, done: int, total: int, user_id: int, uploader: str = "SpyLib") -> str:
+    def calculate_progress(self, done: int, total: int, user_id: int, uploader: str = "SpLib") -> str:
         user_data = self.user_progress[user_id]
         percent = (done / total) * 100
         progress_bar = "♦" * int(percent // 10) + "◇" * (10 - int(percent // 10))
@@ -208,7 +208,7 @@ class ProgressManager:
             f"│ **__Speed:__** {speed_mbps:.2f} Mbps\n"
             f"│ **__ETA:__** {eta_min:.2f} min\n"
             f"╰──────────────────╯\n\n"
-            f"**__Powered by Team SPY__**"
+            f"**__Powered by unknown man__**"
         )
 
 class CaptionFormatter:
@@ -265,7 +265,7 @@ class FileOperations:
         """Process filename with user preferences"""
         delete_words = set(self.db.get_user_data(user_id, "delete_words", []))
         replacements = self.db.get_user_data(user_id, "replacement_words", {})
-        rename_tag = self.db.get_user_data(user_id, "rename_tag", "Team SPY")
+        rename_tag = self.db.get_user_data(user_id, "rename_tag", "unknown man")
         
         path = Path(file_path)
         name = path.stem
@@ -484,7 +484,7 @@ class SmartTelegramBot:
                     pass
 
     async def upload_with_telethon(self, file_path: str, user_id: int, target_chat_id: int, caption: str, topic_id: Optional[int] = None, edit_msg=None):
-        """Upload using Telethon (SpyLib) with enhanced features"""
+        """Upload using Telethon (SpLib) with enhanced features"""
         try:
             if edit_msg:
                 await edit_msg.delete()
@@ -595,7 +595,7 @@ class SmartTelegramBot:
             if free_check == 1:
                 # Free user - send with protection
                 reply_markup = InlineKeyboardMarkup([[
-                    InlineKeyboardButton("💎 Get Premium to Forward", url="https://t.me/kingofpatal")
+                    InlineKeyboardButton("💎 Get Premium to Forward", url="https://t.me/Pre_contact_bot")
                 ]])
                 await app.copy_message(target_chat_id, LOG_GROUP, result.id, protect_content=True, reply_markup=reply_markup)
             else:
@@ -713,7 +713,7 @@ class SmartTelegramBot:
                 msg_id = int(parts[-1]) + offset
             
             if chat_id in protected_channels:
-                await app.edit_message_text(sender, edit_id, "❌ This channel is protected by **Team SPY**.")
+                await app.edit_message_text(sender, edit_id, "❌ This channel is protected by **unknown Gunman**.")
                 return None, None
                 
             return chat_id, msg_id
@@ -919,7 +919,7 @@ class SmartTelegramBot:
             [Button.inline("Set Thumbnail", b'setthumb'), Button.inline("Remove Thumbnail", b'remthumb')],
             [Button.inline("PDF Watermark", b'pdfwt'), Button.inline("Video Watermark", b'watermark')],
             [Button.inline("Upload Method", b'uploadmethod')],
-            [Button.url("Report Issues", "https://t.me/team_spy_pro")]
+            [Button.url("Report Issues", "https://t.me/rajputserver")]
         ]
         
         message = (
