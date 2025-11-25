@@ -16,11 +16,16 @@ from datetime import datetime as dt
 from typing import Optional
 
 import cv2
-import pymongo
 
+# Correct Telethon RPC error imports (fixed)
 from telethon import Button, functions, types
-from telethon.errors import FloodWait, UserAlreadyParticipant, InviteHashInvalid, InviteHashExpired
-from telethon.errors.rpcerrorlist import UserNotParticipant  # best-effort import; catch generic exceptions too
+from telethon.errors.rpcerrorlist import (
+    FloodWait,
+    UserAlreadyParticipant,
+    InviteHashInvalid,
+    InviteHashExpired,
+    UserNotParticipant,
+)
 
 from config import CHANNEL_ID, OWNER_ID
 from devgagan.core.mongo.plans_db import premium_users
@@ -51,7 +56,11 @@ async def gen_link(client, chat_id):
     try:
         # Telethon high-level may have export_chat_invite_link on client wrappers; try that first
         if hasattr(client, "export_chat_invite_link"):
-            return await client.export_chat_invite_link(chat_id)
+            try:
+                return await client.export_chat_invite_link(chat_id)
+            except Exception:
+                pass
+
         # Try using raw API (best-effort)
         try:
             res = await client(functions.messages.ExportChatInviteRequest(peer=chat_id))
@@ -87,11 +96,11 @@ async def subscribe(client, message):
     try:
         # Try to see if the user is participant
         try:
-            # Telethon: get_participant / get_permissions - try get_participant
+            # Telethon get_participant/get_permissions usage may vary; try get_participant
+            # get_participant accepts (channel, user) where user may be id or username
             participant = await client.get_participant(update_channel, message.from_id.user_id if getattr(message, 'from_id', None) else message.sender_id)
-            # If returned, user is participant
-            if getattr(participant, "participant", None) and getattr(participant.participant, "__class__", None):
-                return 0
+            # If returned without exception, treat as participant
+            return 0
         except UserNotParticipant:
             # not participant
             pass
@@ -112,6 +121,7 @@ async def subscribe(client, message):
             await message.reply(file="https://envs.sh/F6T.jpg", message=caption, buttons=buttons)
         except Exception:
             try:
+                # fallback to send_file
                 await client.send_file(message.chat_id or message.sender_id, "https://envs.sh/F6T.jpg", caption=caption, buttons=buttons)
             except Exception:
                 # final fallback: send plain message
@@ -243,7 +253,7 @@ def convert(seconds: int) -> str:
 async def userbot_join(client, invite_link: str) -> str:
     """
     Best-effort join using Telethon client and the invite link.
-    For channel username (t.me/username), use Invite via functions.channels.JoinChannelRequest
+    For channel username (t.me/username), use JoinChannelRequest
     For joinchat links, use ImportChatInviteRequest with hash.
     """
     try:
