@@ -17,10 +17,10 @@ from typing import Optional
 
 import cv2
 
-# Correct Telethon RPC error imports (fixed)
+# Correct Telethon RPC error imports (fixed names)
 from telethon import Button, functions, types
 from telethon.errors.rpcerrorlist import (
-    FloodWait,
+    FloodWaitError,
     UserAlreadyParticipant,
     InviteHashInvalid,
     InviteHashExpired,
@@ -64,8 +64,11 @@ async def gen_link(client, chat_id):
         # Try using raw API (best-effort)
         try:
             res = await client(functions.messages.ExportChatInviteRequest(peer=chat_id))
+            # raw response structure may vary
             if hasattr(res, "link"):
                 return res.link
+            if hasattr(res, "invite_link") and getattr(res, "invite_link"):
+                return getattr(res, "invite_link")
         except Exception:
             pass
 
@@ -98,16 +101,23 @@ async def subscribe(client, message):
         try:
             # Telethon get_participant/get_permissions usage may vary; try get_participant
             # get_participant accepts (channel, user) where user may be id or username
-            participant = await client.get_participant(update_channel, message.from_id.user_id if getattr(message, 'from_id', None) else message.sender_id)
-            # If returned without exception, treat as participant
-            return 0
+            user_id = None
+            try:
+                # event-like message may have .from_id.user_id or .sender_id
+                user_id = message.from_id.user_id if getattr(message, 'from_id', None) and getattr(message.from_id, 'user_id', None) else getattr(message, 'sender_id', None)
+            except Exception:
+                user_id = getattr(message, 'sender_id', None)
+
+            if user_id is not None:
+                participant = await client.get_participant(update_channel, user_id)
+                return 0
         except UserNotParticipant:
             # not participant
             pass
         except Exception:
             # Some wrappers raise different exceptions — fallback to trying to fetch chat member via functions
             try:
-                await client(functions.channels.GetParticipantRequest(channel=update_channel, participant=message.sender_id))
+                await client(functions.channels.GetParticipantRequest(channel=update_channel, participant=getattr(message, 'sender_id', None)))
                 return 0
             except Exception:
                 pass
@@ -270,7 +280,7 @@ async def userbot_join(client, invite_link: str) -> str:
                     return "User is already a participant."
                 except (InviteHashInvalid, InviteHashExpired):
                     return "Could not join. Maybe your link is expired or Invalid."
-                except FloodWait:
+                except FloodWaitError:
                     return "Too many requests, try again later."
                 except Exception as e:
                     print(f"[userbot_join.import] {e}")
@@ -282,7 +292,7 @@ async def userbot_join(client, invite_link: str) -> str:
                     return "Successfully joined the Channel"
                 except UserAlreadyParticipant:
                     return "User is already a participant."
-                except FloodWait:
+                except FloodWaitError:
                     return "Too many requests, try again later."
                 except Exception as e:
                     print(f"[userbot_join.join] {e}")
